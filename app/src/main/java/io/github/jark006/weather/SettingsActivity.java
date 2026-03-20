@@ -35,6 +35,8 @@ public class SettingsActivity extends AppCompatActivity {
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/jark006/weather_widget"))));
         findViewById(R.id.quarkpanButton).setOnClickListener(v ->
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://pan.quark.cn/s/d841f3513866"))));
+        findViewById(R.id.lanzouButton).setOnClickListener(v ->
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://jark006.lanzout.com/b0kovbidi"))));
         findViewById(R.id.baidupanButton).setOnClickListener(v ->
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://pan.baidu.com/s/1vmY4shG9SIjsFPMSxQYGpg?pwd=6666"))));
 

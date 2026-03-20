@@ -74,10 +74,11 @@ https://developer.amap.com/pages/privacy/\n\n
     <string name="latitudeText">纬度</string>
     <string name="areaTextHint">地名，随便写</string>
     <string name="areaText">地区</string>
-    <string name="saveText">保存当前设置</string>
+    <string name="saveText">保存当前位置</string>
     <string name="settingText">设置</string>
     <string name="pickerText">在线拾取坐标</string>
     <string name="quarkpanText">夸克盘</string>
+    <string name="lanzouText">蓝奏盘 密码:6666</string>
     <string name="baidupanText">百度盘 密码:6666</string>
 
 </resources>
