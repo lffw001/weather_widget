@@ -20,8 +20,8 @@ android {
         applicationId "io.github.jark006.weather"
         minSdk 21
         targetSdk 34
-        versionCode 317
-        versionName '3.17'
+        versionCode 318
+        versionName '3.18'
         resValue "string", "appVer", "v${versionName}"
     }
 
@@ -38,7 +38,7 @@ android {
     }
     android.applicationVariants.configureEach {
         variant -> variant.outputs.configureEach {
-            outputFileName = "weather_widget_v${variant.versionName}_${releaseTime()}_${variant.buildType.name}.apk"
+            outputFileName = "MiniWeather_v${variant.versionName}_${releaseTime()}_${variant.buildType.name}.apk"
         }
     }
     compileOptions {

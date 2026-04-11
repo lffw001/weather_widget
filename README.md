@@ -4,7 +4,7 @@
 <font size="6"><strong>小天气</strong></font>
 <br>
 
-[Releases](https://github.com/jark006/weather_widget/releases) |
+[Releases](https://github.com/jark006/MiniWeather/releases) |
 [夸克网盘](https://pan.quark.cn/s/d841f3513866)|
 [百度云盘 提取码：6666](https://pan.baidu.com/s/1vmY4shG9SIjsFPMSxQYGpg?pwd=6666)
 

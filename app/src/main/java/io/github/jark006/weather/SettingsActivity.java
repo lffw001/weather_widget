@@ -32,7 +32,7 @@ public class SettingsActivity extends AppCompatActivity {
         findViewById(R.id.pickerButton).setOnClickListener(v ->
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://lbs.amap.com/tools/picker"))));
         findViewById(R.id.btJumpToGithub).setOnClickListener(v ->
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/jark006/weather_widget"))));
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/jark006/MiniWeather"))));
         findViewById(R.id.quarkpanButton).setOnClickListener(v ->
                 startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://pan.quark.cn/s/d841f3513866"))));
         findViewById(R.id.lanzouButton).setOnClickListener(v ->
