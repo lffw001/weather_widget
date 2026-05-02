@@ -73,6 +73,13 @@ public abstract class WidgetCaiyunBase extends AppWidgetProvider {
                 locationStruct.latitude = Utils.defLatitude;
             }
 
+            // 给经纬度加点随机漂移 -0.05 ~ 0.05
+            java.util.Random random = new java.util.Random();
+            double latOffset = (random.nextDouble() - 0.5) * 0.1; // -0.05 ~ 0.05
+            double lonOffset = (random.nextDouble() - 0.5) * 0.1; // -0.05 ~ 0.05
+            locationStruct.latitude += latOffset;
+            locationStruct.longitude += lonOffset;
+
             try {
                 String link = String.format("https://api.caiyunapp.com/v2.5/%s/%f,%f/weather.json?alert=true&hourlysteps=12&dailysteps=3",
                         APIKEY, locationStruct.longitude, locationStruct.latitude);
