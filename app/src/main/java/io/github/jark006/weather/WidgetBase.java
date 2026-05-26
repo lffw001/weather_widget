@@ -25,7 +25,7 @@ import io.github.jark006.weather.utils.LocationStruct;
 import io.github.jark006.weather.utils.NetworkUtils;
 import io.github.jark006.weather.utils.Utils;
 
-public abstract class WidgetCaiyunBase extends AppWidgetProvider {
+public abstract class WidgetBase extends AppWidgetProvider {
 
     final static String REQUEST_MANUAL = "jark_weather_REQUEST_MANUAL_CAIYUN";
     final static String APIKEY = "96Ly7wgKGq6FhllM"; // 彩云 APIKEY
@@ -37,7 +37,6 @@ public abstract class WidgetCaiyunBase extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        // widget1_info.xml     android:updatePeriodMillis 定时1小时
         getWeatherData(context, String.format("%s 定时刷新彩云...", timestamp2HHMM(System.currentTimeMillis()/1000)));
     }
 

@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">小天气</string>
 
-    <string name="widget1_description" translatable="false">长形小部件</string>
-    <string name="widget2_description" translatable="false">方形小部件</string>
+    <string name="widget_normal_description" translatable="false">普通尺寸</string>
+    <string name="widget_mini_description" translatable="false">迷你尺寸</string>
 
     <string name="widget_unknown">未知</string>
     <string name="widget_updating">更新中。。。</string>
@@ -66,9 +66,7 @@ https://developer.amap.com/pages/privacy/\n\n
 
     </string>
     <string name="privacy_title" translatable="false">隐私协议</string>
-    <string name="widget_caiyun1_description">彩云大型</string>
     <string name="hour_temp" translatable="false">08H[ 24 25 26 ]12H</string>
-    <string name="widget_caiyun2_description">彩云小型</string>
     <string name="alertTitle">近期预警</string>
     <string name="longitudeText">经度</string>
     <string name="latitudeText">纬度</string>

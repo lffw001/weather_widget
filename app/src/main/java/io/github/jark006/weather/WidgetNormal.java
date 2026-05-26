@@ -12,12 +12,12 @@ import io.github.jark006.weather.caiyun.Caiyun;
 import io.github.jark006.weather.utils.DateUtils;
 import io.github.jark006.weather.utils.ImageUtils;
 
-public class WidgetCaiyun1 extends WidgetCaiyunBase {
+public class WidgetNormal extends WidgetBase {
 
     @Override
     public void showTips(Context context, String tips) {
         ComponentName componentName = new ComponentName(context, this.getClass());
-        RemoteViews remoteViews = new RemoteViews(BuildConfig.APPLICATION_ID, R.layout.widget_caiyun1);
+        RemoteViews remoteViews = new RemoteViews(BuildConfig.APPLICATION_ID, R.layout.widget_normal);
         remoteViews.setTextViewText(R.id.today_other, tips);
         remoteViews.setOnClickPendingIntent(R.id.widget_rl, createUpdatePendingIntent(context));// 点击手动刷新的Intent
         AppWidgetManager.getInstance(context).updateAppWidget(componentName, remoteViews);
@@ -28,7 +28,7 @@ public class WidgetCaiyun1 extends WidgetCaiyunBase {
     public void updateAppWidget(Context context, Caiyun caiyun, String districtName) {
 
         ComponentName componentName = new ComponentName(context, this.getClass());
-        RemoteViews remoteViews = new RemoteViews(BuildConfig.APPLICATION_ID, R.layout.widget_caiyun1);
+        RemoteViews remoteViews = new RemoteViews(BuildConfig.APPLICATION_ID, R.layout.widget_normal);
 
         // 点击手动刷新的Intent
         remoteViews.setOnClickPendingIntent(R.id.widget_rl, createUpdatePendingIntent(context));
@@ -56,7 +56,7 @@ public class WidgetCaiyun1 extends WidgetCaiyunBase {
                 long hours = (System.currentTimeMillis() / 3600000 + 8) % 24;
                 boolean isDay = hours >= 6 && hours < 18;
                 remoteViews.setInt(R.id.widget_rl, "setBackgroundResource",
-                        ImageUtils.getBgResourceIdCaiyun(realtime.skycon, isDay));
+                        ImageUtils.getBgResourceId(realtime.skycon, isDay));
             }
 
             var minutely = caiyun.result.minutely;
@@ -95,10 +95,10 @@ public class WidgetCaiyun1 extends WidgetCaiyunBase {
             if (daily != null && daily.skycon != null && daily.skycon.size() > 2) {
                 var tomorrow = daily.skycon.get(1);
                 remoteViews.setInt(R.id.tomorrowImg, "setBackgroundResource",
-                        ImageUtils.getSkyconIconCaiyun(tomorrow.value));
+                        ImageUtils.getSkyconIcon(tomorrow.value));
                 var overmorrow = daily.skycon.get(2);
                 remoteViews.setInt(R.id.overmorrowImg, "setBackgroundResource",
-                        ImageUtils.getSkyconIconCaiyun(overmorrow.value));
+                        ImageUtils.getSkyconIcon(overmorrow.value));
             }
         }
 
