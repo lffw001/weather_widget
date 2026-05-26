@@ -19,6 +19,7 @@ public class WidgetCaiyun1 extends WidgetCaiyunBase {
         ComponentName componentName = new ComponentName(context, this.getClass());
         RemoteViews remoteViews = new RemoteViews(BuildConfig.APPLICATION_ID, R.layout.widget_caiyun1);
         remoteViews.setTextViewText(R.id.today_other, tips);
+        remoteViews.setOnClickPendingIntent(R.id.widget_rl, createUpdatePendingIntent(context));// 点击手动刷新的Intent
         AppWidgetManager.getInstance(context).updateAppWidget(componentName, remoteViews);
     }
 

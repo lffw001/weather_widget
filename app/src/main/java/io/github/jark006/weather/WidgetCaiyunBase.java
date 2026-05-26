@@ -38,14 +38,14 @@ public abstract class WidgetCaiyunBase extends AppWidgetProvider {
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         // widget1_info.xml     android:updatePeriodMillis 定时1小时
-        getWeatherData(context, "定时刷新彩云...");
+        getWeatherData(context, String.format("%s 定时刷新彩云...", timestamp2HHMM(System.currentTimeMillis()/1000)));
     }
 
     @Override
     public void onReceive(final Context context, Intent intent) {
         super.onReceive(context, intent);
         if (REQUEST_MANUAL.equals(intent.getAction())) {
-            getWeatherData(context, "手动刷新彩云...");
+            getWeatherData(context, String.format("%s 手动刷新彩云...", timestamp2HHMM(System.currentTimeMillis()/1000)));
         }
     }
 
@@ -73,24 +73,30 @@ public abstract class WidgetCaiyunBase extends AppWidgetProvider {
                 locationStruct.latitude = Utils.defLatitude;
             }
 
-            // 给经纬度加点随机漂移 -0.05 ~ 0.05
+            // 给经纬度加随机漂移，落在半径0.2~0.3的圆环内（均匀分布）
             java.util.Random random = new java.util.Random();
-            double latOffset = (random.nextDouble() - 0.5) * 0.1; // -0.05 ~ 0.05
-            double lonOffset = (random.nextDouble() - 0.5) * 0.1; // -0.05 ~ 0.05
+            double angle = random.nextDouble() * 2 * Math.PI;
+            double r = Math.sqrt(random.nextDouble() * (0.3 * 0.3 - 0.2 * 0.2) + 0.2 * 0.2);
+            double latOffset = r * Math.cos(angle);
+            double lonOffset = r * Math.sin(angle);
             locationStruct.latitude += latOffset;
             locationStruct.longitude += lonOffset;
 
             try {
-                String link = String.format("https://api.caiyunapp.com/v2.5/%s/%f,%f/weather.json?alert=true&hourlysteps=12&dailysteps=3",
-                        APIKEY, locationStruct.longitude, locationStruct.latitude);
-                String caiyunData = NetworkUtils.getData(link);
+                // 旧版接口
+                // String link = String.format("https://api.caiyunapp.com/v2.5/%s/%f,%f/weather.json?alert=true&hourlysteps=12&dailysteps=3",
+                //         APIKEY, locationStruct.longitude, locationStruct.latitude);
+                // String caiyunData = NetworkUtils.getData(link);
+
+                String link = String.format("https://api.caiyunapp.com/v2.5/<t1>/%.4f,%.4f/weather.json?alert=true&hourlysteps=12&dailysteps=3&random=%f",
+                        locationStruct.longitude, locationStruct.latitude, random.nextDouble());
+                String caiyunData = NetworkUtils.getWeatherJson(link);
                 if (caiyunData == null) {
-                    Thread.sleep(2000);
-                    caiyunData = NetworkUtils.getData(link); // 重试
+                    throw new Exception("caiyunNull");
                 }
                 Caiyun caiyun = new Gson().fromJson(caiyunData, Caiyun.class);
                 if (caiyun != null && caiyun.status != null && !caiyun.status.equals("ok")) {
-                    throw new Exception("status: " + caiyun.status);
+                    throw new Exception(caiyun.status);
                 }
                 updateAppWidget(context, caiyun, districtName);
 
@@ -98,7 +104,7 @@ public abstract class WidgetCaiyunBase extends AppWidgetProvider {
                     notify(context, caiyun.result.alert);
 
             } catch (Exception e) {
-                showTips(context, "发生异常 " + e);
+                showTips(context, String.format("异常 %.4f,%.4f %s", locationStruct.longitude, locationStruct.latitude, e));
             }
         }).start();
     }
