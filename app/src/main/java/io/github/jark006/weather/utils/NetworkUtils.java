@@ -2,6 +2,10 @@ package io.github.jark006.weather.utils;
 
 import static android.content.ContentValues.TAG;
 
+import static io.github.jark006.weather.utils.Utils.saveLog;
+
+import android.annotation.SuppressLint;
+import android.content.Context;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -13,7 +17,6 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 
-import okhttp3.Call;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -32,7 +35,6 @@ public class NetworkUtils {
 
     private static final HashMap<String, String> COMMON_HEADERS = new HashMap<>() {{
         put("accept", "application/json");
-//        put("accept-encoding", "gzip, deflate, br, zstd"); // 导致解码失败
         put("accept-language", "zh-CN,zh;q=0.9,en;q=0.8");
         put("origin", "https://caiyunapp.com");
         put("referer", "https://caiyunapp.com/");
@@ -45,11 +47,13 @@ public class NetworkUtils {
         put("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36");
     }};
 
-    public static String getData(String link) {
+    @SuppressLint("DefaultLocale")
+    public static String getData(Context context, String link) {
+        HttpURLConnection conn = null;
         try {
-            URL url = new URL(link);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setConnectTimeout(2 * 1000);
+            conn = (HttpURLConnection) new URL(link).openConnection();
+            conn.setConnectTimeout(8 * 1000);
+            conn.setReadTimeout(8 * 1000);
 
             int resCode = conn.getResponseCode();
             if (resCode == 200) {
@@ -64,22 +68,25 @@ public class NetworkUtils {
                 os.close();
                 return os.toString();
             } else {
-                Log.e(TAG, String.format("NetworkUtils 返回码:%d 异常", resCode));
+                saveLog(context, String.format("NetworkUtils 返回码:%d 异常 %s", resCode, link));
                 return null;
             }
         } catch (IOException e) {
-            Log.e(TAG, "NetworkUtils IOException IO异常");
+            saveLog(context, String.format("NetworkUtils IOException IO异常 %s\n%s",link, e.getMessage()));
+        } finally {
+            if (conn != null) conn.disconnect();
         }
         return null;
     }
 
     // 新版获取天气接口，入参是间接链接
+    @SuppressLint("DefaultLocale")
     @Nullable
-    public static String getWeatherJson(String payloadUrl) {
+    public static String getWeatherJson(Context context, String payloadUrl) {
         try {
             OkHttpClient client = new OkHttpClient.Builder()
-                    .connectTimeout(5, java.util.concurrent.TimeUnit.SECONDS)
-                    .readTimeout(10, java.util.concurrent.TimeUnit.SECONDS)
+                    .connectTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
+                    .readTimeout(3, java.util.concurrent.TimeUnit.SECONDS)
                     .build();
 
             // 第一步：获取 ticket
@@ -97,12 +104,12 @@ public class NetworkUtils {
             String ticket;
             try (Response ticketResponse = client.newCall(ticketRequest).execute()) {
                 if (!ticketResponse.isSuccessful()) {
-                    Log.e(TAG, String.format("getWeatherJson 获取ticket失败 返回码:%d", ticketResponse.code()));
+                    saveLog(context, String.format("getWeatherJson 获取ticket失败 返回码:%d", ticketResponse.code()));
                     return null;
                 }
                 String ticketBody = ticketResponse.body() != null ? ticketResponse.body().string() : null;
                 if (ticketBody == null) {
-                    Log.e(TAG, "getWeatherJson 获取ticket响应体为空");
+                    saveLog(context, "getWeatherJson 获取ticket响应体为空");
                     return null;
                 }
                 JSONObject ticketJson = new JSONObject(ticketBody);
@@ -110,11 +117,8 @@ public class NetworkUtils {
             }
 
             // 第二步：用 ticket 鉴权，发送天气请求
-            JSONObject payloadJson = new JSONObject();
-            payloadJson.put("url", payloadUrl);
-
             MediaType JSON_MEDIA = MediaType.get("application/json; charset=utf-8");
-            RequestBody requestBody = RequestBody.create(JSON_MEDIA, payloadJson.toString());
+            RequestBody requestBody = RequestBody.create(JSON_MEDIA, payloadUrl);
 
             Request.Builder weatherRequestBuilder = new Request.Builder()
                     .url(BASE_URL + "/api/?ticket=" + ticket)
@@ -129,19 +133,19 @@ public class NetworkUtils {
 
             try (Response weatherResponse = client.newCall(weatherRequest).execute()) {
                 if (!weatherResponse.isSuccessful()) {
-                    Log.e(TAG, String.format("getWeatherJson 天气请求失败 返回码:%d", weatherResponse.code()));
+                    saveLog(context, String.format("getWeatherJson 天气请求失败 返回码:%d", weatherResponse.code()));
                     return null;
                 }
                 String weatherBody = weatherResponse.body() != null ? weatherResponse.body().string() : null;
                 if (weatherBody == null) {
-                    Log.e(TAG, "getWeatherJson 天气响应体为空");
+                    saveLog(context, "getWeatherJson 天气响应体为空");
                     return null;
                 }
                 return weatherBody;
             }
 
         } catch (Exception e) {
-            Log.e(TAG, "getWeatherJson 异常: " + e.getMessage());
+            saveLog(context, "getWeatherJson 异常: " + e.getMessage());
         }
         return null;
     }

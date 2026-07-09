@@ -21,4 +21,5 @@
 #-renamesourcefileattribute SourceFile
 -keep public class io.github.jark006.weather.caiyun.** {*;}
 -keep public class io.github.jark006.weather.utils.LocationStruct {*;}
-
+-keep class io.github.jark006.weather.WidgetBase { <init>(); }
+-keep class * extends io.github.jark006.weather.WidgetBase { <init>(); }

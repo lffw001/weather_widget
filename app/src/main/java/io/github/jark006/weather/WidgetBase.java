@@ -2,6 +2,8 @@ package io.github.jark006.weather;
 
 import static android.content.Context.NOTIFICATION_SERVICE;
 
+import static io.github.jark006.weather.utils.Utils.saveLog;
+
 import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationManager;
@@ -18,6 +20,7 @@ import androidx.annotation.NonNull;
 import com.google.gson.Gson;
 
 import java.util.HashMap;
+import java.util.Random;
 
 import io.github.jark006.weather.caiyun.Caiyun;
 import io.github.jark006.weather.caiyun.Caiyun.Result.Alert;
@@ -30,6 +33,10 @@ public abstract class WidgetBase extends AppWidgetProvider {
     final static String REQUEST_MANUAL = "jark_weather_REQUEST_MANUAL_CAIYUN";
     final static String APIKEY = "96Ly7wgKGq6FhllM"; // 彩云 APIKEY
 
+    // 启动前台服务时携带的 Intent 附加字段
+    static final String EXTRA_WIDGET_CLASS = "widget_class_name";
+    static final String EXTRA_TIPS = "widget_tips";
+
     @Override
     public void onEnabled(Context context) {
         super.onEnabled(context);
@@ -37,81 +44,109 @@ public abstract class WidgetBase extends AppWidgetProvider {
 
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
-        getWeatherData(context, String.format("%s 定时刷新彩云...", timestamp2HHMM(System.currentTimeMillis()/1000)));
+        startFetch(context, String.format("%s 定时刷新彩云...", timestamp2HHMM(System.currentTimeMillis() / 1000)));
     }
 
     @Override
     public void onReceive(final Context context, Intent intent) {
         super.onReceive(context, intent);
         if (REQUEST_MANUAL.equals(intent.getAction())) {
-            getWeatherData(context, String.format("%s 手动刷新彩云...", timestamp2HHMM(System.currentTimeMillis()/1000)));
+            startFetch(context, String.format("%s 手动刷新彩云...", timestamp2HHMM(System.currentTimeMillis() / 1000)));
         }
     }
 
+    /**
+     * 通过前台服务获取天气数据，避免后台进程被系统限制联网。
+     * Android 12+ 禁止后台启动前台服务时，回退到 goAsync() 异步窗口执行。
+     */
+    void startFetch(Context context, @NonNull String tips) {
+        Intent service = new Intent(context, WeatherFetchService.class)
+                .putExtra(EXTRA_WIDGET_CLASS, this.getClass().getName())
+                .putExtra(EXTRA_TIPS, tips);
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                context.startForegroundService(service);
+            else
+                context.startService(service);
+        } catch (Exception e) {
+            saveLog(context, "前台服务启动失败，回退异步刷新: " + e);
+            final var pendingResult = goAsync();
+            new Thread(() -> {
+                try {
+                    doFetch(context, this.getClass(), tips);
+                } finally {
+                    pendingResult.finish();
+                }
+            }).start();
+        }
+    }
 
     /**
-     * 获取天气数据
+     * 获取并展示天气数据。由前台服务或 goAsync 回退路径在后台线程调用。
      */
     @SuppressLint("DefaultLocale")
-    private void getWeatherData(Context context, @NonNull String tips) {
+    @SuppressWarnings("unchecked")
+    static void doFetch(Context context, Class<? extends WidgetBase> widgetClass, @NonNull String tips) {
+        WidgetBase widget;
+        try {
+            widget = widgetClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            saveLog(context, "创建小部件实例失败: " + e);
+            return;
+        }
 
-        showTips(context, tips);
+        widget.showTips(context, tips);
 
-        new Thread(() -> {
-            LocationStruct locationStruct = (LocationStruct) Utils.readObj(context, "locationStruct");
-            if (locationStruct == null) {
-                locationStruct = new LocationStruct();
+        LocationStruct locationStruct = (LocationStruct) Utils.readObj(context, "locationStruct");
+        if (locationStruct == null) {
+            locationStruct = new LocationStruct();
+        }
+
+        String districtName = locationStruct.districtName;
+        if (districtName.isEmpty())
+            districtName = locationStruct.cityName;
+
+        if (Math.abs(locationStruct.latitude) > 88.0) {  // 靠近南北极就是位置异常
+            locationStruct.longitude = Utils.defLongitude;
+            locationStruct.latitude = Utils.defLatitude;
+        }
+
+        // 给经纬度加随机漂移
+        Random random = new Random();
+        locationStruct.latitude += (random.nextDouble() - 0.5) * 0.2;
+        locationStruct.longitude += (random.nextDouble() - 0.5) * 0.2;
+
+        try {
+            String link = String.format("https://api.caiyunapp.com/v2.5/%s/%.6f,%.6f/weather.json?alert=true&hourlysteps=12&dailysteps=3",
+                    APIKEY, locationStruct.longitude, locationStruct.latitude);
+            String caiyunData = NetworkUtils.getData(context, link);
+
+            if (caiyunData == null) {
+                throw new Exception("caiyunNull");
             }
-
-            String districtName = locationStruct.districtName;
-            if (districtName.isEmpty())
-                districtName = locationStruct.cityName;
-
-            if (Math.abs(locationStruct.latitude) > 88.0) {  // 靠近南北极就是位置异常
-                locationStruct.longitude = Utils.defLongitude;
-                locationStruct.latitude = Utils.defLatitude;
+            Caiyun caiyun = new Gson().fromJson(caiyunData, Caiyun.class);
+            if (caiyun != null && caiyun.status != null && !caiyun.status.equals("ok")) {
+                throw new Exception(caiyun.status);
             }
+            widget.updateAppWidget(context, caiyun, districtName);
 
-            // 给经纬度加随机漂移，落在半径0.2~0.3的圆环内（均匀分布）
-            java.util.Random random = new java.util.Random();
-            double angle = random.nextDouble() * 2 * Math.PI;
-            double r = Math.sqrt(random.nextDouble() * (0.3 * 0.3 - 0.2 * 0.2) + 0.2 * 0.2);
-            double latOffset = r * Math.cos(angle);
-            double lonOffset = r * Math.sin(angle);
-            locationStruct.latitude += latOffset;
-            locationStruct.longitude += lonOffset;
+            if (caiyun != null && caiyun.result != null && caiyun.result.alert != null)
+                widget.notify(context, caiyun.result.alert);
 
-            try {
-                // 旧版接口
-                // String link = String.format("https://api.caiyunapp.com/v2.5/%s/%f,%f/weather.json?alert=true&hourlysteps=12&dailysteps=3",
-                //         APIKEY, locationStruct.longitude, locationStruct.latitude);
-                // String caiyunData = NetworkUtils.getData(link);
+            var tmp = String.format("成功 %.6f,%.6f", locationStruct.longitude, locationStruct.latitude);
+            saveLog(context, tmp);
 
-                String link = String.format("https://api.caiyunapp.com/v2.5/<t1>/%.4f,%.4f/weather.json?alert=true&hourlysteps=12&dailysteps=3&random=%f",
-                        locationStruct.longitude, locationStruct.latitude, random.nextDouble());
-                String caiyunData = NetworkUtils.getWeatherJson(link);
-                if (caiyunData == null) {
-                    throw new Exception("caiyunNull");
-                }
-                Caiyun caiyun = new Gson().fromJson(caiyunData, Caiyun.class);
-                if (caiyun != null && caiyun.status != null && !caiyun.status.equals("ok")) {
-                    throw new Exception(caiyun.status);
-                }
-                updateAppWidget(context, caiyun, districtName);
-
-                if (caiyun != null && caiyun.result != null && caiyun.result.alert != null)
-                    notify(context, caiyun.result.alert);
-
-            } catch (Exception e) {
-                showTips(context, String.format("异常 %.4f,%.4f %s", locationStruct.longitude, locationStruct.latitude, e));
-            }
-        }).start();
+        } catch (Exception e) {
+            var tmp = String.format("异常 %.6f,%.6f %s", locationStruct.longitude, locationStruct.latitude, e.getMessage());
+            widget.showTips(context, tmp);
+            saveLog(context, tmp);
+        }
     }
 
     @SuppressLint("DefaultLocale")
-    String timestamp2HHMM(long ts) {
-        ts = (ts + 8 * 3600) % 86400;
-        return String.format("%02d:%02d", (ts / 3600), (ts % 3600) / 60);
+    String timestamp2HHMM(long timestamp) {
+        long seconds = (timestamp + 8 * 3600) % 86400;
+        return String.format("%02d:%02d", (seconds / 3600), (seconds % 3600) / 60);
     }
 
     @SuppressWarnings("unchecked")

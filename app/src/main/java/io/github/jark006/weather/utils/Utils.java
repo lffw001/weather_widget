@@ -43,14 +43,6 @@ public class Utils {
             "Ⅰ级（特别严重）预警",
     };
 
-    public final static int[] IMPORTANT_INT = {
-            NotificationManager.IMPORTANCE_NONE,
-            NotificationManager.IMPORTANCE_MIN,
-            NotificationManager.IMPORTANCE_LOW,
-            NotificationManager.IMPORTANCE_DEFAULT,
-            NotificationManager.IMPORTANCE_HIGH,
-            NotificationManager.IMPORTANCE_MAX,
-    };
     public static final int[] warnIconIndex = {
             R.drawable.ic_warning_white,
             R.drawable.ic_warning_blue,
@@ -64,7 +56,7 @@ public class Utils {
         return ContextCompat.checkSelfPermission(activity, permission) != PackageManager.PERMISSION_GRANTED;
     }
 
-    public static void createNotificationChannel(Activity activity, Context context){
+    public static void createNotificationChannel(Activity activity, Context context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 isNoPermission(activity, Manifest.permission.POST_NOTIFICATIONS)) {
 
@@ -82,12 +74,23 @@ public class Utils {
         }
 
         // 创建预警信息通知通道
-        NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
-        for (int warnLevel = 0; warnLevel < 5; warnLevel++) {
-            String channelId = Utils.warnLevelStr[warnLevel];//00白色 ... 04红色
-            NotificationChannel channel = new NotificationChannel(channelId, channelId, Utils.IMPORTANT_INT[warnLevel + 1]);
-            channel.setDescription(Utils.warnLevelDescription[warnLevel]);
-            notificationManager.createNotificationChannel(channel);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            final int[] IMPORTANT_INT = {
+                    NotificationManager.IMPORTANCE_NONE,
+                    NotificationManager.IMPORTANCE_MIN,
+                    NotificationManager.IMPORTANCE_LOW,
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                    NotificationManager.IMPORTANCE_HIGH,
+                    NotificationManager.IMPORTANCE_MAX,
+            };
+
+            NotificationManager notificationManager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
+            for (int warnLevel = 0; warnLevel < 5; warnLevel++) {
+                String channelId = Utils.warnLevelStr[warnLevel];//00白色 ... 04红色
+                NotificationChannel channel = new NotificationChannel(channelId, channelId, IMPORTANT_INT[warnLevel + 1]);
+                channel.setDescription(Utils.warnLevelDescription[warnLevel]);
+                notificationManager.createNotificationChannel(channel);
+            }
         }
     }
 
@@ -120,30 +123,30 @@ public class Utils {
     }
 
     public static Object readObj(Context context, String path) {
-        try {
-            FileInputStream fis = context.openFileInput(path);
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            var obj = ois.readObject();
-            ois.close();
-            fis.close();
-            return obj;
+        try (FileInputStream fis = context.openFileInput(path);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            return ois.readObject();
         } catch (FileNotFoundException ignore) {
-            saveLog(context, "读取 [" + path + "] 失败，文件不存在。\n");
+            saveLog(context, "读取 [" + path + "] 失败，文件不存在。");
         } catch (Exception e) {
-            saveLog(context, "读取 [" + path + "] 失败\n" + e);
+            saveLog(context, "读取 [" + path + "] 失败: " + e);
         }
         return null;
     }
 
     public static void saveObj(Context context, String path, Object obj) {
-        try {
-            FileOutputStream fos = context.openFileOutput(path, Context.MODE_PRIVATE);
-            ObjectOutputStream oos = new ObjectOutputStream(fos);
+        String tmpPath = path + ".tmp";
+        try (FileOutputStream fos = context.openFileOutput(tmpPath, Context.MODE_PRIVATE);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
             oos.writeObject(obj);
-            oos.close();
-            fos.close();
         } catch (Exception e) {
-            saveLog(context, "保存 [" + path + "] 失败\n" + e);
+            saveLog(context, "保存 [" + path + "] 失败: " + e);
+            return;
+        }
+        // 删除旧文件后重命名临时文件，避免写入失败时留下损坏文件
+        context.deleteFile(path);
+        if (!context.getFileStreamPath(tmpPath).renameTo(context.getFileStreamPath(path))) {
+            saveLog(context, "保存 [" + path + "] 重命名失败");
         }
     }
 

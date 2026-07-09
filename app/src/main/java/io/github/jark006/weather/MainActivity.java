@@ -1,6 +1,7 @@
 package io.github.jark006.weather;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -143,6 +144,9 @@ public class MainActivity extends AppCompatActivity {
 
             Utils.saveObj(getApplicationContext(), "locationStruct", locationStruct);
 
+            @SuppressLint("DefaultLocale")
+            var tmp = String.format("更新位置 %.6f,%.6f", locationStruct.longitude, locationStruct.latitude);
+            Utils.saveLog(getApplicationContext(), tmp);
         }
     };
 
